@@ -7,66 +7,229 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
     <style>
-        body { font-family: Arial, sans-serif; background-color: #f8f9fa; padding-top: 50px; }
-        .container { max-width: 600px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0px 0px 10px rgba(0,0,0,0.1); }
+        body { font-family: Arial, sans-serif; background-color: #f8f9fa; padding: 50px 0; }
+        .container { max-width: 800px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0px 0px 10px rgba(0,0,0,0.1); }
         h1 { color: #007bff; }
         .btn-custom { width: 100%; }
+        .note { font-size: 14px; color: #6c757d; margin-top: 5px; }
+        .step { padding: 15px; border-left: 5px solid #007bff; margin-bottom: 25px; background: #e9f5ff; border-radius: 5px; }
+        .balance-card { background-color: #f8f9fa; border-radius: 5px; padding: 10px; margin-bottom: 20px; }
+        .balance-value { font-size: 24px; font-weight: bold; }
+        .loading { display: none; }
+        .description { background-color: #f1f8ff; padding: 10px; border-radius: 5px; margin-bottom: 15px; border-left: 3px solid #0366d6; }
+        .description h5 { color: #0366d6; margin-bottom: 10px; }
+        .description p { font-size: 14px; margin-bottom: 0; }
+        .status-indicator { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; }
+        .status-active { background-color: #28a745; }
+        .status-inactive { background-color: #dc3545; }
     </style>
 </head>
 <body>
-    <div class="container text-center">
-        <h1>Budget Vault System</h1>
-        <div class="mb-3">
-            <h3>Main Account Balance: <span id="main_balance">Loading...</span></h3>
-            <h3>Vault Balance: <span id="vault_balance">Loading...</span></h3>
-            <h3>Daily Allocation: <span id="daily_allocation">Loading...</span></h3>
-            <h3>Remaining Days: <span id="remaining_days">Loading...</span></h3>
+    <div class="container">
+        <h1 class="text-center mb-4">Budget Vault System Prototype</h1>
+        
+        <div class="description">
+            <h5>About Budget Vault</h5>
+            <p>Budget Vault helps users manage their spending by allocating funds for a specific period and releasing them daily. This encourages discipline in spending and provides a structured approach to budgeting.</p>
         </div>
 
-        <div class="mb-4">
-            <h2>Transfer Funds to Vault</h2>
-            <input type="number" id="amount" class="form-control" placeholder="Amount to transfer" required>
-            <input type="number" id="days" class="form-control mt-2" placeholder="Days to divide" required>
-            <button class="btn btn-primary mt-3 btn-custom" onclick="transferFunds()">Transfer</button>
+        <!-- Current Balance Section -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="balance-card">
+                    <h4>Main Account</h4>
+                    <div class="balance-value" id="main_account">R0.00</div>
+                    <div class="note">Available funds outside the vault</div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="balance-card">
+                    <h4>Vault Balance</h4>
+                    <div class="balance-value" id="vault_balance">R0.00</div>
+                    <div class="note">Funds locked in the vault</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="balance-card">
+                    <h4>Daily Allocation</h4>
+                    <div class="balance-value" id="daily_allocation">R0.00</div>
+                    <div class="note">Available to spend each day</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="balance-card">
+                    <h4>Remaining Days</h4>
+                    <div class="balance-value" id="remaining_days">0</div>
+                    <div class="note">Days left in budget cycle</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="balance-card">
+                    <h4>Carry Over</h4>
+                    <div class="balance-value" id="carry_over">R0.00</div>
+                    <div class="note">Unused funds from previous days</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="balance-card mb-4">
+            <h4>Budget Cycle Status</h4>
+            <div class="mt-2">
+                <span class="status-indicator" id="status_indicator"></span>
+                <span id="status_text">Not active</span>
+            </div>
+            <div class="note">Indicates whether a budget cycle is currently active</div>
+        </div>
+
+        <div class="step">
+            <h3>Step 1: Transfer Funds to Vault</h3>
+            <div class="description">
+                <h5>How it works</h5>
+                <p>Transfer funds from your main account to the vault. Specify how many days you want to budget for, and the system will calculate your daily allocation. Once transferred, these funds will be locked in the vault and only accessible through daily withdrawals.</p>
+            </div>
+            <input type="number" id="amount" class="form-control" placeholder="Amount to transfer">
+            <input type="number" id="days" class="form-control mt-2" placeholder="Days to divide">
+            <button class="btn btn-primary mt-3 btn-custom" onclick="transferFunds()">
+                <span class="spinner-border spinner-border-sm loading" id="transfer_loading"></span>
+                Transfer
+            </button>
             <p id="transfer_message" class="mt-2 text-success"></p>
         </div>
 
-        <div>
-            <h2>Release Daily Funds</h2>
-            <button class="btn btn-success btn-custom" onclick="releaseFunds()">Release Funds</button>
-            <p id="release_message" class="mt-2 text-danger"></p>
+        <div class="step">
+            <h3>Step 2: Daily Fund Release</h3>
+            <div class="description">
+                <h5>How it works</h5>
+                <p>Withdraw your daily allocation plus any carry-over from previous days. You can choose to withdraw a percentage of the available funds, with the remainder added to your carry-over for future use. The system keeps track of missed days and includes them in your available funds.</p>
+            </div>
+            <div class="form-group">
+                <label for="withdraw_percentage">Percentage to withdraw (1-100%)</label>
+                <input type="range" id="withdraw_percentage" class="form-range" min="1" max="100" value="100">
+                <div class="d-flex justify-content-between">
+                    <span>1%</span>
+                    <span id="percentage_display">100%</span>
+                    <span>100%</span>
+                </div>
+            </div>
+            <button class="btn btn-success mt-3 btn-custom" onclick="releaseFunds()">
+                <span class="spinner-border spinner-border-sm loading" id="release_loading"></span>
+                Withdraw Funds
+            </button>
+            <p id="release_message" class="mt-2 text-success"></p>
+        </div>
+
+        <div class="step">
+            <h3>Step 3: Withdraw Remaining Funds</h3>
+            <div class="description">
+                <h5>How it works</h5>
+                <p>Once your budget cycle is complete (no remaining days) or you only have carry-over funds left, you can withdraw all remaining funds back to your main account. This option is locked during an active budget cycle to maintain budget discipline.</p>
+            </div>
+            <button class="btn btn-warning btn-custom" onclick="withdrawRemaining()">
+                <span class="spinner-border spinner-border-sm loading" id="withdraw_loading"></span>
+                Withdraw All Remaining Funds
+            </button>
+            <p id="withdraw_message" class="mt-2 text-info"></p>
         </div>
     </div>
 
     <script>
-        function updateBalances() {
+        // Load initial balances
+        $(document).ready(function() {
+            refreshBalances();
+            
+            // Update percentage display when slider changes
+            $("#withdraw_percentage").on("input", function() {
+                $("#percentage_display").text($(this).val() + "%");
+            });
+        });
+
+        // Format currency
+        function formatCurrency(amount) {
+            return 'R' + parseFloat(amount).toFixed(2);
+        }
+
+        // Refresh all balances
+        function refreshBalances() {
             $.get("/balance", function(data) {
-                $("#main_balance").text("R" + data.main_account);
-                $("#vault_balance").text("R" + data.vault_balance);
-                $("#daily_allocation").text("R" + data.daily_allocation);
+                $("#main_account").text(formatCurrency(data.main_account));
+                $("#vault_balance").text(formatCurrency(data.vault_balance));
+                $("#daily_allocation").text(formatCurrency(data.daily_allocation));
                 $("#remaining_days").text(data.remaining_days);
+                $("#carry_over").text(formatCurrency(data.carry_over));
+                
+                // Update budget cycle status
+                if (data.budget_cycle_active) {
+                    $("#status_indicator").removeClass("status-inactive").addClass("status-active");
+                    $("#status_text").text("Active");
+                } else {
+                    $("#status_indicator").removeClass("status-active").addClass("status-inactive");
+                    $("#status_text").text("Not active");
+                }
             });
         }
-        
+
+        // Transfer funds function
         function transferFunds() {
+            $("#transfer_loading").show();
+            $("#transfer_message").text("");
+            
             let amount = $("#amount").val();
             let days = $("#days").val();
+            
+            if (!amount || !days || parseFloat(amount) <= 0 || parseInt(days) <= 0) {
+                $("#transfer_message").text("Please enter valid amount and days.");
+                $("#transfer_loading").hide();
+                return;
+            }
+            
             $.post("/transfer", { amount: amount, days: days }, function(response) {
                 $("#transfer_message").text(response.message);
-                updateBalances();
+                $("#transfer_loading").hide();
+                refreshBalances();
+                
+                // Clear inputs
+                $("#amount").val("");
+                $("#days").val("");
+            }).fail(function(xhr) {
+                $("#transfer_message").text("Error: " + (xhr.responseJSON?.message || "Unable to transfer funds."));
+                $("#transfer_loading").hide();
             });
         }
-        
+
+        // Release daily funds function
         function releaseFunds() {
-            $.post("/release", function(response) {
+            $("#release_loading").show();
+            $("#release_message").text("");
+            
+            let percentage = $("#withdraw_percentage").val();
+            
+            $.post("/release", { percentage: percentage }, function(response) {
                 $("#release_message").text(response.message);
-                updateBalances();
+                $("#release_loading").hide();
+                refreshBalances();
+            }).fail(function(xhr) {
+                $("#release_message").text("Error: " + (xhr.responseJSON?.message || "Unable to release funds."));
+                $("#release_loading").hide();
             });
         }
-        
-        $(document).ready(function() {
-            updateBalances();
-        });
+
+        // Withdraw remaining funds function
+        function withdrawRemaining() {
+            $("#withdraw_loading").show();
+            $("#withdraw_message").text("");
+            
+            $.post("/withdraw-remaining", function(response) {
+                $("#withdraw_message").text(response.message);
+                $("#withdraw_loading").hide();
+                refreshBalances();
+            }).fail(function(xhr) {
+                $("#withdraw_message").text("Error: " + (xhr.responseJSON?.message || "Unable to withdraw remaining funds."));
+                $("#withdraw_loading").hide();
+            });
+        }
     </script>
 </body>
 </html>
